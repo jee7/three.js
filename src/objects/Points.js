@@ -1,10 +1,10 @@
-import { Sphere } from '../math/Sphere';
-import { Ray } from '../math/Ray';
-import { Matrix4 } from '../math/Matrix4';
-import { Object3D } from '../core/Object3D';
-import { Vector3 } from '../math/Vector3';
-import { PointsMaterial } from '../materials/PointsMaterial';
-import { BufferGeometry } from '../core/BufferGeometry';
+import { Sphere } from '../math/Sphere.js';
+import { Ray } from '../math/Ray.js';
+import { Matrix4 } from '../math/Matrix4.js';
+import { Object3D } from '../core/Object3D.js';
+import { Vector3 } from '../math/Vector3.js';
+import { PointsMaterial } from '../materials/PointsMaterial.js';
+import { BufferGeometry } from '../core/BufferGeometry.js';
 
 /**
  * @author alteredq / http://alteredqualia.com/
@@ -18,6 +18,8 @@ function Points( geometry, material ) {
 
 	this.geometry = geometry !== undefined ? geometry : new BufferGeometry();
 	this.material = material !== undefined ? material : new PointsMaterial( { color: Math.random() * 0xffffff } );
+
+	this.updateMorphTargets();
 
 }
 
@@ -46,6 +48,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 			sphere.copy( geometry.boundingSphere );
 			sphere.applyMatrix4( matrixWorld );
+			sphere.radius += threshold;
 
 			if ( raycaster.ray.intersectsSphere( sphere ) === false ) return;
 
@@ -57,6 +60,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 			var localThreshold = threshold / ( ( this.scale.x + this.scale.y + this.scale.z ) / 3 );
 			var localThresholdSq = localThreshold * localThreshold;
 			var position = new Vector3();
+			var intersectPoint = new Vector3();
 
 			function testPoint( point, index ) {
 
@@ -64,7 +68,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 				if ( rayPointDistanceSq < localThresholdSq ) {
 
-					var intersectPoint = ray.closestPointToPoint( point );
+					ray.closestPointToPoint( point, intersectPoint );
 					intersectPoint.applyMatrix4( matrixWorld );
 
 					var distance = raycaster.ray.origin.distanceTo( intersectPoint );
@@ -86,7 +90,7 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 			}
 
-			if ( (geometry && geometry.isBufferGeometry) ) {
+			if ( geometry.isBufferGeometry ) {
 
 				var index = geometry.index;
 				var attributes = geometry.attributes;
@@ -134,6 +138,38 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 	}() ),
 
+	updateMorphTargets: function () {
+
+		var geometry = this.geometry;
+		var m, ml, name;
+
+		var morphAttributes = geometry.morphAttributes;
+		var keys = Object.keys( morphAttributes );
+
+		if ( keys.length > 0 ) {
+
+			var morphAttribute = morphAttributes[ keys[ 0 ] ];
+
+			if ( morphAttribute !== undefined ) {
+
+				this.morphTargetInfluences = [];
+				this.morphTargetDictionary = {};
+
+				for ( m = 0, ml = morphAttribute.length; m < ml; m ++ ) {
+
+					name = morphAttribute[ m ].name || String( m );
+
+					this.morphTargetInfluences.push( 0 );
+					this.morphTargetDictionary[ name ] = m;
+
+				}
+
+			}
+
+		}
+
+	},
+
 	clone: function () {
 
 		return new this.constructor( this.geometry, this.material ).copy( this );
@@ -141,6 +177,5 @@ Points.prototype = Object.assign( Object.create( Object3D.prototype ), {
 	}
 
 } );
-
 
 export { Points };
